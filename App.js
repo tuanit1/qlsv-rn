@@ -11,12 +11,12 @@ export default function App() {
   return (
     <NavigationContainer>
       <Stack.Navigator>
-        <Stack.Screen name="Main" component={MainScreen} 
+        <Stack.Screen name="Main" component={MainScreen}
           options={{
-             title: 'Danh sách học viên' ,
+            title: 'Danh sách học viên',
           }} />
-        <Stack.Screen name="Detail" component={DetailScreen} 
-          options={{ title: 'Chi tiết học viên' }}/>
+        <Stack.Screen name="Detail" component={DetailScreen}
+          options={{ title: 'Chi tiết học viên' }} />
       </Stack.Navigator>
     </NavigationContainer>
   );

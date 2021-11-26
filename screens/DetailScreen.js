@@ -1,23 +1,27 @@
-import React, {Component} from 'react';
-import { StyleSheet, Text, View, ScrollView, TextInput, Image, TouchableWithoutFeedback, TouchableHighlight,
-        Button} from 'react-native';
+import React, { Component } from 'react';
+import {
+    StyleSheet, Text, View, ScrollView, TextInput, Image, TouchableWithoutFeedback, TouchableHighlight,
+    Button
+} from 'react-native';
 import SelectDropdown from 'react-native-select-dropdown';
 import DatePicker from 'react-native-datepicker';
+import * as ImagePicker from 'expo-image-picker';
+import RNFetchBlob from 'rn-fetch-blob';
 
-import {PostAPI, ExecuteQuery, server_url} from '../networking/Server';
+import { PostAPI, ExecuteQuery, UploadImageServer, server_url } from '../networking/Server';
 
 export default class DetailScreen extends Component {
 
-    constructor(props){
+    constructor(props) {
         super(props);
 
-        
+
         var mode = this.props.route.params.mode;
         var fl = this.props.route.params.fl;
         var navigation = this.props.route.params.navigation;
         var item;
 
-        if(mode == 'add'){
+        if (mode == 'add') {
             item = {
                 id: 0,
                 name: '',
@@ -26,23 +30,24 @@ export default class DetailScreen extends Component {
                 birthday: new Date().toISOString(),
                 address: '',
             }
-        }else{
+        } else {
             item = this.props.route.params.item;
         }
 
         console.log(item);
 
-        this.state =({
-            mNavigation : navigation,
+        this.state = ({
+            mNavigation: navigation,
             mMode: mode,
             mImage: item.image,
             mFl: fl,
-            mId : item.id,
-            mName : item.name,
-            mClassID : item.class_id,
-            mBirthday : new Date(item.birthday),
-            mAddress : item.address,
-            array_class : [],
+            mId: item.id,
+            mName: item.name,
+            mClassID: item.class_id,
+            mBirthday: new Date(item.birthday),
+            mAddress: item.address,
+            array_class: [],
+            imageSource: null,
         });
 
 
@@ -69,7 +74,7 @@ export default class DetailScreen extends Component {
             });
             console.error(error);
         });
-    } 
+    }
 
     _DeleteStudent = () => {
         let params = {
@@ -80,14 +85,14 @@ export default class DetailScreen extends Component {
         console.log(JSON.stringify(params));
 
         ExecuteQuery(params).then((result) => {
-            if(result == 'success'){
+            if (result == 'success') {
 
                 this.state.mFl.refreshDataFromServer();
                 alert('Xoá học viên thành công');
 
                 this.state.mNavigation.navigate("Main");
 
-            }else{
+            } else {
                 alert('Đã có lỗi xảy ra');
             }
         }).catch((error) => {
@@ -95,9 +100,11 @@ export default class DetailScreen extends Component {
         });
     }
 
-    _UpdateStudent = () =>{
+
+
+    _UpdateStudent = () => {
         let params = {
-            method_name: this.state.mMode == 'add'?'method_add_student':'method_update_student',
+            method_name: this.state.mMode == 'add' ? 'method_add_student' : 'method_update_student',
             id: this.state.mId,
             name: this.state.mName,
             class_id: this.state.mClassID,
@@ -108,35 +115,83 @@ export default class DetailScreen extends Component {
         console.log(JSON.stringify(params));
 
         ExecuteQuery(params).then((result) => {
-            if(result == 'success'){
+            if (result == 'success') {
 
                 this.state.mFl.refreshDataFromServer();
 
-                alert(this.state.mMode == 'add'?'Thêm học viên thành công':'Cập nhập thông tin thành công');
+                alert(this.state.mMode == 'add' ? 'Thêm học viên thành công' : 'Cập nhập thông tin thành công');
 
                 this.state.mNavigation.navigate("Main");
 
-            }else{
+            } else {
                 alert('Đã có lỗi xảy ra');
             }
         }).catch((error) => {
             console.error(error);
         });
     }
-    
+
+    _PickImage = async () => {
+        let result = await ImagePicker.launchImageLibraryAsync({
+            mediaTypes: ImagePicker.MediaTypeOptions.Images,
+            allowsEditing: true,
+            aspect: [4, 4],
+            quality: 1,
+        });
+
+        console.log(result);
+
+        if (!result.cancelled) {
+            this.setState({ imageSource: result.uri });
+
+            this._UploadImage(result); 
+        }
+    };
+
+    _UploadImage = async (result) =>{
+
+        // UploadImageServer(result.data).then((result) => {
+        //     if (result == 'success') {
+
+        //         this.state.mFl.refreshDataFromServer();
+        //         alert('Cập nhập ảnh thành công!');
+
+        //     } else {
+        //         alert('Đã có lỗi xảy ra');
+        //     }
+        // }).catch((error) => {
+        //     console.error(error);
+        // });
+
+        // var api_path = server_url + "upload.php"
+
+        // RNFetchBlob.fetch('POST', api_path, {
+        //     Authorization: "Bearer access-token",
+        //     otherHeader: "foo",
+        //     'Content-Type': 'multipart/form-data',
+        // }, [
+        //     { name: 'image', filename: 'image.png', type: 'image/png', data: result.data }
+        // ]).then((resp) => {
+        //     return resp.text();
+        // }).catch((err) => {
+        //     console.error(err);
+        // })
+    }
+
+
     render() {
 
         var item = this.props.route.params.item;
- 
+
         const FindClassIndex = (class_id) => {
             return this.state.array_class.findIndex((item) => item.id == class_id);
         }
 
         var img_path;
 
-        if(this.state.mImage == '') {
+        if (this.state.mImage == '') {
             img_path = server_url + 'image/default_ic.jpg';
-        }else{
+        } else {
             img_path = server_url + 'image/' + this.state.mImage;
         }
 
@@ -144,10 +199,10 @@ export default class DetailScreen extends Component {
 
             <ScrollView>
                 <View style={styles.container}>
-                    {this.state.mMode == 'update'?(
-                        <View style={{flex: 1, alignItems: 'center'}}>
+                    {this.state.mMode == 'update' ? (
+                        <View style={{ flex: 1, alignItems: 'center' }}>
                             <Image
-                                source={{uri: img_path}}
+                                source={{ uri: this.state.imageSource != null ? this.state.imageSource : img_path }}
                                 style={{
                                     width: 150,
                                     height: 150,
@@ -157,22 +212,22 @@ export default class DetailScreen extends Component {
                                 }}
                             />
 
-                            <TouchableWithoutFeedback>
+                            <TouchableWithoutFeedback onPress={this._PickImage}>
                                 <Text style={{
-                                    borderWidth:1,
+                                    borderWidth: 1,
                                     borderRadius: 5,
-                                    padding: 5, 
+                                    padding: 5,
                                 }}>Đổi ảnh đại diện</Text>
                             </TouchableWithoutFeedback>
                         </View>
-                    ):null}
-                    
+                    ) : null}
+
                     <Text style={styles.inputTitle}>Tên học viên</Text>
                     <TextInput
                         style={styles.input}
                         defaultValue={this.state.mName}
                         onChangeText={(text) => {
-                            this.setState({mName: text})
+                            this.setState({ mName: text })
                         }}
                         keyboardType="default"
                     />
@@ -191,7 +246,7 @@ export default class DetailScreen extends Component {
                             data={this.state.array_class}
                             onSelect={(selectedItem, index) => {
                                 this.setState({
-                                    mClassID : selectedItem.id,
+                                    mClassID: selectedItem.id,
                                 });
                             }}
                             buttonTextAfterSelection={(selectedItem, index) => {
@@ -201,14 +256,14 @@ export default class DetailScreen extends Component {
                                 return item.name;
                             }}
                             defaultValue={this.state.array_class[FindClassIndex(this.state.mClassID)]}
-                            
+
                         />
                     </View>
 
-                    <Text style={styles.inputTitle}>Ngày sinh</Text>                  
+                    <Text style={styles.inputTitle}>Ngày sinh</Text>
                     <DatePicker
                         showIcon={false}
-                        style={{width:300}}
+                        style={{ width: 300 }}
                         androidMode="spinner"
                         date={this.state.mBirthday}
                         mode="date"
@@ -217,44 +272,44 @@ export default class DetailScreen extends Component {
                         cancelBtnText="Hủy"
                         customStyles={{
                             dateInput: {
-                            borderWidth: 1,
-                            borderColor: 'black',
-                            borderRadius: 5,
+                                borderWidth: 1,
+                                borderColor: 'black',
+                                borderRadius: 5,
                             },
                         }}
                         onDateChange={(date) => {
                             this.setState({ mBirthday: date });
                         }}
-                        />
+                    />
 
                     <Text style={styles.inputTitle}>Địa chỉ</Text>
                     <TextInput
                         style={styles.input}
                         defaultValue={this.state.mAddress}
-                        onChangeText={(text) => this.setState({mAddress: text})}
+                        onChangeText={(text) => this.setState({ mAddress: text })}
                         keyboardType="default"
                     />
 
                     <TouchableWithoutFeedback onPress={() => this._UpdateStudent()}>
                         <View style={styles.btn_ok}>
-                            <Text style={{fontSize: 20, color: 'white'}}>{this.state.mMode == 'add'?"Thêm":"Cập nhập"}</Text>
+                            <Text style={{ fontSize: 20, color: 'white' }}>{this.state.mMode == 'add' ? "Thêm" : "Cập nhập"}</Text>
                         </View>
                     </TouchableWithoutFeedback>
 
-                    {this.state.mMode == 'update'?(
+                    {this.state.mMode == 'update' ? (
                         <TouchableWithoutFeedback onPress={() => this._DeleteStudent()}>
-                        <View style={styles.btn_del}>
-                            <Text style={{fontSize: 20, color: 'white'}}>Xóa</Text>
-                        </View>
+                            <View style={styles.btn_del}>
+                                <Text style={{ fontSize: 20, color: 'white' }}>Xóa</Text>
+                            </View>
                         </TouchableWithoutFeedback>
-                    ): null}
-                    
-                    
+                    ) : null}
+
+
                 </View>
-                
+
             </ScrollView>
 
-            
+
         );
     }
 }
@@ -285,7 +340,7 @@ const styles = StyleSheet.create({
     },
 
     btn_ok: {
-        width:200,
+        width: 200,
         marginTop: 30,
         padding: 10,
         alignItems: 'center',
@@ -294,7 +349,7 @@ const styles = StyleSheet.create({
     },
 
     btn_del: {
-        width:200,
+        width: 200,
         marginTop: 10,
         marginBottom: 30,
         padding: 10,
